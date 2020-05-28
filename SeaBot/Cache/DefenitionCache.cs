@@ -26,7 +26,7 @@ namespace SeaBotCore.Cache
     using System.Xml;
 
     using Newtonsoft.Json;
-
+    using SeaBotCore.Data;
     using SeaBotCore.Data.Definitions;
     using SeaBotCore.Data.Materials;
     using SeaBotCore.Logger;
@@ -35,9 +35,9 @@ namespace SeaBotCore.Cache
 
     internal static class DefenitionCache
     {
-        private const string _basedwnladdr = "https://static.seaportgame.com/build/";
+        private const string _basedwnladdr = "https://cdn.seaportgame.com/build/";
 
-        private const string _baseaddr = "https://r4a4v3g4.ssl.hwcdn.net/definitions/filelists/";
+        private const string _baseaddr = "https://cdn.seaportgame.com/definitions/filelists/";
 
         private const string _cachefolder = "cache";
 
@@ -46,7 +46,7 @@ namespace SeaBotCore.Cache
 
         private static readonly object locker = new object();
 
-        private static string _lastestdef = "2.635.0";
+        private static string _lastestdef = "2.949.0";
 
         public static bool DownloadCache()
         {
@@ -54,7 +54,7 @@ namespace SeaBotCore.Cache
             {
                 try
                 {
-                    var xml = new WebClient().DownloadString(_baseaddr + _lastestdef + ".xml");
+                    var xml = Parser.ConvertJSONToXmlString( new WebClient().DownloadString(_baseaddr + _lastestdef + ".json"));
                     var doc = new XmlDocument();
                     doc.LoadXml(xml);
                     if (doc.DocumentElement != null)
@@ -64,8 +64,17 @@ namespace SeaBotCore.Cache
                         {
                             if (node.InnerText.Contains("definitions_json.zip"))
                             {
-                                var dl = new Regex(@"definitions_json\.zip,(.+)").Match(node.InnerText).Groups[1].Value;
-                                new WebClient().DownloadFile(_basedwnladdr + dl, "cache.zip");
+                                XmlNode hashNode = node.NextSibling ;
+                                string hashDL;
+
+                                if (hashNode.Name != "hash")
+                                {
+                                    hashNode = hashNode.NextSibling;
+                                }
+                                hashDL = hashNode.InnerText;
+
+                                //var dl = new Regex(@"definitions_json\.zip,(.+)").Match(node.InnerText).Groups[1].Value;
+                                new WebClient().DownloadFile(_basedwnladdr + hashDL, "cache.zip");
                                 using (var archive = ZipFile.OpenRead("cache.zip"))
                                 {
                                     if (!Directory.Exists(_cachefolder))

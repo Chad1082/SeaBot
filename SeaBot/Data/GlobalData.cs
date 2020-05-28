@@ -23,7 +23,8 @@ namespace SeaBotCore.Data
     using System.Linq;
     using System.Runtime.CompilerServices;
     using System.Xml;
-
+    using System.Xml.Linq;
+    using Newtonsoft.Json;
     using SeaBotCore.BotMethods;
     using SeaBotCore.Data.Materials;
     using SeaBotCore.Utils;
@@ -153,15 +154,21 @@ namespace SeaBotCore.Data
                                 };
                     a.Rewards = new List<Reward>();
                     var rewardnode = node.SelectSingleNode("rewards");
-                    foreach (XmlNode rnode in rewardnode)
+
+                    if (rewardnode != null)
                     {
-                        a.Rewards.Add(
-                            new Reward
+
+                        foreach (XmlNode rnode in rewardnode)
+                        {
+                            a.Rewards.Add(
+                                new Reward
                                 {
                                     Id = Convert.ToInt32(rnode.SelectSingleNode("id")?.InnerText),
                                     Type = rnode.SelectSingleNode("type")?.InnerText,
                                     Amount = Convert.ToInt32(rnode.SelectSingleNode("amount")?.InnerText)
                                 });
+                        }
+
                     }
 
                     data.Contracts.Add(a);
@@ -401,6 +408,26 @@ namespace SeaBotCore.Data
             data.HeartbeatInterval =
                 Convert.ToInt32(doc.DocumentElement.SelectSingleNode("config/heartbeat_interval")?.InnerText);
             return data;
+        }
+
+        public static string ConvertJSONToXmlString(string JSON) 
+        {
+            XmlDocument doc = (XmlDocument)JsonConvert.DeserializeXmlNode(JSON,"xml");
+            string xmlString = doc.OuterXml;
+            return xmlString;
+        }
+
+        public static bool IsValidXml(this string xml)
+        {
+            try
+            {
+                XDocument.Parse(xml);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 

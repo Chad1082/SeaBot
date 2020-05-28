@@ -103,6 +103,7 @@ namespace SeaBotCore
             using (var client = new HttpClient(handler) { BaseAddress = baseAddress })
             {
                 cookieContainer.Add(baseAddress, new Cookie("_pf_login_server_token", Core.Config.server_token));
+                cookieContainer.Add(baseAddress, new Cookie("pixsid_portal", "2vavk2elovtqc3nt978a3mkv8t"));
                 Logger.Logger.Info(Localization.NETWORKING_LOGIN_1);
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.80 Safari/537.36");
@@ -150,7 +151,7 @@ namespace SeaBotCore
                         }
 
                         Client.DefaultRequestHeaders.Host = "portal.pixelfederation.com";
-                        Client.DefaultRequestHeaders.Add("Origin", "https://r4a4v3g4.ssl.hwcdn.net");
+                        Client.DefaultRequestHeaders.Add("Origin", "https://cdn.seaportgame.com");
                         Client.DefaultRequestHeaders.AcceptEncoding.TryParseAdd("gzip, deflate, br");
                         Client.DefaultRequestHeaders.Accept.TryParseAdd(@"*/*");
                         Client.DefaultRequestHeaders.AcceptLanguage.TryParseAdd(
@@ -173,6 +174,12 @@ namespace SeaBotCore
             var values = new Dictionary<string, string> { { "pid", tempuid }, { "session_id", Core.Ssid } };
             var s = SendRequest(values, "client.login");
             SendRequest(values, "client.update");
+
+            if (!s.StartsWith("<xml>"))
+            {
+                s = Parser.ConvertJSONToXmlString(s);
+            }
+
             if (s.StartsWith("<xml>"))
             {
                 Core.GlobalData = Parser.ParseXmlToGlobalData(s);
@@ -214,7 +221,18 @@ namespace SeaBotCore
                     var doc = new XmlDocument();
                     try
                     {
-                        doc.LoadXml(response.Result.Content.ReadAsStringAsync().Result);
+                        string resp = response.Result.Content.ReadAsStringAsync().Result;
+
+                        if (resp.IsValidXml())
+                        {
+                            doc.LoadXml(resp);
+                        }
+                        else 
+                        {
+                            resp = Parser.ConvertJSONToXmlString(resp);
+                            doc.LoadXml(resp);
+                        }
+                        
                     }
                     catch (Exception e)
                     {
@@ -254,6 +272,7 @@ namespace SeaBotCore
             }
         }
 
+        //TODO: Change the below to send JSON not XML
         public static void Sync()
         {
             var taskstr = new StringBuilder("<xml>\n");
@@ -295,6 +314,16 @@ namespace SeaBotCore
             var doc = new XmlDocument();
             try
             {
+
+                if (response.IsValidXml())
+                {
+                    doc.LoadXml(response);
+                }
+                else
+                {
+                    response = Parser.ConvertJSONToXmlString(response);
+                    doc.LoadXml(response);
+                }
                 doc.LoadXml(response);
             }
             catch (Exception e)

@@ -24,7 +24,7 @@ namespace SeaBotCore.Cache
     using System.Net;
     using System.Text.RegularExpressions;
     using System.Xml;
-
+    using SeaBotCore.Data;
     using SeaBotCore.Localizaion;
     using SeaBotCore.Logger;
 
@@ -32,15 +32,15 @@ namespace SeaBotCore.Cache
 
     public static class LocalizationCache
     {
-        private const string _baseaddr = "https://static.seaportgame.com/localization/";
+        private const string _baseaddr = "https://cdn.seaportgame.com/localization/";
 
-        private const string _baseaddr2 = "https://static.seaportgame.com/build/";
+        private const string _baseaddr2 = "https://cdn.seaportgame.com/build/";
 
         private const string _cachefolder = "loccache";
 
         private static readonly object locker = new object();
 
-        private static string _lastestdef = "1.427.0";
+        private static string _lastestdef = "1.934.0";
 
         private static Dictionary<string, string> _local;
 
@@ -52,27 +52,39 @@ namespace SeaBotCore.Cache
                 {
                     var neededlangs = Enum.GetNames(typeof(LocalizationController.ELanguages));
                     Logger.Info(Localization.CORE_LOCAL_DOWNLOAD_STARTED);
-                    var xml = new WebClient().DownloadString(_baseaddr + _lastestdef + ".xml");
+                    var xml = Parser.ConvertJSONToXmlString( new WebClient().DownloadString(_baseaddr + _lastestdef + ".json"));
                     var doc = new XmlDocument();
                     doc.LoadXml(xml);
                     if (doc.DocumentElement != null)
                     {
-                        var nodes = doc.SelectSingleNode("xml/files");
-                        foreach (XmlNode node in nodes.ChildNodes)
+                        var nodes = doc.SelectNodes("xml/files");
+                        foreach (XmlNode node in nodes)
                         {
-                            if (node.InnerText.Contains("localization.csv")
-                                && neededlangs.Where(n => node.InnerText.Contains(n)).Any())
-                            {
+                            //if (node.InnerText.Contains("localization.csv")
+                            //    && neededlangs.Where(n => node.InnerText.Contains(n)).Any())
+                            if (node.InnerText.Contains("CSV/EN/localization.csv"))
+                                {
+
+
+                                XmlNode hashNode = node.SelectSingleNode("hash");
+                                string hashDL;
+
+                                hashDL = hashNode.InnerText;
+
+
                                 var dl = new Regex(@"\/(.+)\/localization\.csv,(.+)").Match(node.InnerText);
                                 if (!Directory.Exists(_cachefolder))
                                 {
                                     Directory.CreateDirectory(_cachefolder);
                                 }
 
+                                //new WebClient().DownloadFile(
+                                //    _baseaddr2 + dl.Groups[2].Value,
+                                //    $"{_cachefolder}/{dl.Groups[1].Value}.lang");
                                 new WebClient().DownloadFile(
-                                    _baseaddr2 + dl.Groups[2].Value,
-                                    $"{_cachefolder}/{dl.Groups[1].Value}.lang");
-                                Logger.Info(string.Format(Localization.CORE_LOCAL_DOWNLOAD_STEP, dl.Groups[1].Value));
+                                    _baseaddr2 + hashDL,
+                                    $"{_cachefolder}/EN.lang");
+                                Logger.Info(string.Format(Localization.CORE_LOCAL_DOWNLOAD_STEP, "EN"));
                             }
                         }
                     }
